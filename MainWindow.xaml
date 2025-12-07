@@ -39,60 +39,63 @@
 			<StackPanel>
 
 				<!-- Header -->
+				<!--
 				<StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
 					<StackPanel>
 						<TextBlock Text="Desktop Metrics" Foreground="White" FontSize="18" FontWeight="Bold"/>
-						<!-- <TextBlock Text="CPU / GPU / Board / SSD / Water" Foreground="#A7B0C0" FontSize="12" Margin="0,2,0,0"/> -->
+						<TextBlock Text="CPU / GPU / Board / SSD / Water" Foreground="#A7B0C0" FontSize="12" Margin="0,2,0,0"/>
 					</StackPanel>
 					<Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10,0,0,0" Padding="6,2" CornerRadius="8" Background="#242B3A">
 						<TextBlock x:Name="ModeText" Text="Modus: Normal" Foreground="#A7B0C0" FontSize="11"/>
 					</Border>
 				</StackPanel>
-
+				-->
 				<!-- <Separator Margin="0,10,0,8" Opacity="0.3"/> -->
 
 				<!-- Metrics -->
 				<StackPanel>
-					<TextBlock Text="Temperaturen" Foreground="#A7B0C0" FontSize="13" Margin="0,0,0,4"/>
+					<!--
+					<TextBlock Text="..." Foreground="#A7B0C0" FontSize="13" Margin="0,0,0,4"/>
+					-->
+					<!-- CPU -->
 					<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
 						<TextBlock Text="CPU" Width="80" Foreground="#738099" FontSize="12"/>
 						<TextBlock x:Name="CpuTempText" Text="–" Foreground="White" FontSize="12"/>
+						<TextBlock x:Name="CpuWattText" Text="–" Foreground="White" FontSize="12"/>
 					</StackPanel>
-
+					<!-- GPU -->
 					<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
 						<TextBlock Text="GPU" Width="80" Foreground="#738099" FontSize="12"/>
 						<TextBlock x:Name="GpuTempText" Text="–" Foreground="White" FontSize="12"/>
+						<TextBlock x:Name="GpuWattText" Text="–" Foreground="White" FontSize="12"/>
 					</StackPanel>
-
+					<!-- Mainboard -->
 					<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-						<TextBlock Text="Mainboard" Width="80" Foreground="#738099" FontSize="12"/>
+						<TextBlock Text="Board" Width="80" Foreground="#738099" FontSize="12"/>
 						<TextBlock x:Name="MbTempText" Text="–" Foreground="White" FontSize="12"/>
 					</StackPanel>
-
+					<!-- Storage -->
 					<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
 						<TextBlock Text="SSD" Width="80" Foreground="#738099" FontSize="12"/>
 						<TextBlock x:Name="StorageTempText" Text="–" Foreground="White" FontSize="12"/>
 					</StackPanel>
+					<!-- Cooling -->
+					<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+						<TextBlock Text="Liquid" Width="80" Foreground="#738099" FontSize="12"/>
+						<TextBlock x:Name="WaterTempText" Text="–" Foreground="White" FontSize="12"/>
+					</StackPanel>
+					<!--
+					<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+						<TextBlock Text="Pump" Width="80" Foreground="#738099" FontSize="12"/>
+						<TextBlock x:Name="PumpRpmText" Text="–" Foreground="White" FontSize="12"/>
+					</StackPanel>
+					-->
 				</StackPanel>
-
-				<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-					<TextBlock Text="Water" Width="80" Foreground="#738099" FontSize="12"/>
-					<TextBlock x:Name="WaterTempText" Text="–" Foreground="White" FontSize="12"/>
-				</StackPanel>
-
-				<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-					<TextBlock Text="Pump" Width="80" Foreground="#738099" FontSize="12"/>
-					<TextBlock x:Name="PumpRpmText" Text="–" Foreground="White" FontSize="12"/>
-				</StackPanel>
-
-				<Separator Margin="0,10,0,6" Opacity="0.3"/>
-
 				<!-- Status & Hint -->
 				<StackPanel Orientation="Vertical">
-					<TextBlock x:Name="StatusText" Text="Bereit." Foreground="#738099" FontSize="11"/>
+					<TextBlock x:Name="StatusText" Text="" Foreground="#738099" FontSize="11"/>
 					<!-- <TextBlock Text="F10: Wallpaper / Normal · ESC: Beenden" Foreground="#4E5B7A" FontSize="10"	Margin="0,4,0,0"/> -->
 				</StackPanel>
-
 			</StackPanel>
 		</Border>
 	</Grid>
