@@ -81,13 +81,13 @@ namespace DesktopMetrics
 			GetCpuTemperatureInternal();
 
 		public float? GetCpuLoad() =>
-			GetSensorValue(HardwareType.Cpu, SensorType.Load, "CPU Total");
+			GetSensorValue(HardwareType.Cpu, SensorType.Load, "CPU Package");
 
 		public float? GetGpuTemperature() =>
 			GetGpuTemperatureInternal();
 
 		public float? GetGpuLoad() =>
-			GetSensorValue(HardwareType.GpuNvidia, SensorType.Load, "GPU Core");
+			GetSensorValue(HardwareType.GpuNvidia, SensorType.Load, "GPU Package");
 
 		public float? GetWaterTemperature() =>
 			GetFromCooler(SensorType.Temperature, "Water Temperature");
@@ -174,8 +174,7 @@ namespace DesktopMetrics
 				cooler.Update();
 
 				var sensor = cooler.Sensors
-					.Where(s => s.SensorType == type &&
-								s.Name.Contains(nameContains, StringComparison.OrdinalIgnoreCase))
+					.Where(s => s.SensorType == type && s.Name.Contains(nameContains, StringComparison.OrdinalIgnoreCase))
 					.FirstOrDefault();
 
 				return sensor?.Value;

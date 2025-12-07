@@ -20,6 +20,8 @@
 
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -32,20 +34,25 @@ namespace DesktopMetrics
 	{
 		private readonly DispatcherTimer _timer;
 		private readonly HardwareMonitorService _hwService;
+		private readonly SemaphoreSlim _refreshGate = new(1, 1); // schützt vor parallelen Refreshes
 		private bool _isWallpaper = false;
 
 		public MainWindow()
 		{
 			InitializeComponent();
+			Positioning();
 			_hwService = new HardwareMonitorService();
 			_timer = new DispatcherTimer
 			{
-				Interval = TimeSpan.FromSeconds(1)
+				Interval = TimeSpan.FromSeconds(1) // refresh 1 sec
 			};
-			_timer.Tick += (_, __) => RefreshMetrics();
-			Loaded += (_, __) =>
+			_timer.Tick += async (_, __) => await RefreshMetricsAsync();
+			Loaded += async (_, __) =>
 			{
-				RefreshMetrics();
+				this.UpdateLayout();
+				Positioning(); //??
+
+				await RefreshMetricsAsync();
 				_timer.Start();
 			};
 			KeyDown += MainWindow_KeyDown;
@@ -91,46 +98,113 @@ namespace DesktopMetrics
 				ModeText.Text = "Modus: Normal";
 				StatusText.Text = "Normal-Modus aktiv. F10 für Wallpaper.";
 			}
+			this.UpdateLayout();
+			Positioning();
 		}
 
-		private void RefreshMetrics()
+		private void Positioning()
 		{
+			var workArea  = SystemParameters.WorkArea;
+			const double marginRight = 10; // 10px Abstand zum Rand
+			const double marginTop = 20;
+			// Fensterbreite kannst du anpassen
+			//double width = 220;   // oder dynamisch messen
+			//this.Width = width;
+
+			double width = this.ActualWidth;
+			if ( width <= 0 )
+			{
+				this.Width = 250;
+				width = this.Width;
+			}
+
+			this.Left = workArea.Right - width - marginRight;
+			this.Top  = workArea.Top + marginTop; 
+		}
+
+
+		private async Task RefreshMetricsAsync()
+		{
+			if( !await _refreshGate.WaitAsync(0) )
+				return;
 			try
 			{
-				var cpuTemp = _hwService.GetCpuTemperature();
-				var cpuLoad = _hwService.GetCpuLoad();
-				var gpuTemp = _hwService.GetGpuTemperature();
-				var gpuLoad = _hwService.GetGpuLoad();
-				var board   = _hwService.GetMotherboardTemperature();
-				var ssd     = _hwService.GetSsdTemperature();
-				var water   = _hwService.GetWaterTemperature();
-				var pump    = _hwService.GetPumpRpm();
-				CpuTempText.Text   = cpuTemp.HasValue ? $"{cpuTemp.Value:F1} °C" : "n/a";
-				// optional: CPU-Load dazu
-				GpuTempText.Text   = gpuTemp.HasValue ? $"{gpuTemp.Value:F1} °C" : "n/a";
-				MbTempText.Text    = board.HasValue   ? $"{board.Value:F1} °C"   : "n/a";
-				StorageTempText.Text = ssd.HasValue   ? $"{ssd.Value:F1} °C"     : "n/a";
-				WaterTempText.Text = water.HasValue   ? $"{water.Value:F1} °C"   : "n/a";
-				PumpRpmText.Text   = pump.HasValue    ? $"{pump.Value:F0} RPM"   : "n/a";
+				// Sensoren im Hintergrund-Thread auslesen
+				MetricsSnapshot snapshot = await Task.Run( () => ReadMetricsSnapshot() );
+				// Danach sind wir wieder im UI-Thread (wegen DispatcherTimer + SynchronizationContext),
+				// also können wir direkt die UI updaten:
+				CpuTempText.Text     = snapshot.CpuTemp.HasValue   ? $"{snapshot.CpuTemp.Value:F1} °C" : "n/a";
+				GpuTempText.Text     = snapshot.GpuTemp.HasValue   ? $"{snapshot.GpuTemp.Value:F1} °C" : "n/a";
+				MbTempText.Text      = snapshot.BoardTemp.HasValue ? $"{snapshot.BoardTemp.Value:F1} °C" : "n/a";
+				StorageTempText.Text = snapshot.SsdTemp.HasValue   ? $"{snapshot.SsdTemp.Value:F1} °C" : "n/a";
+				WaterTempText.Text   = snapshot.WaterTemp.HasValue ? $"{snapshot.WaterTemp.Value:F1} °C" : "n/a";
+				PumpRpmText.Text     = snapshot.PumpRpm.HasValue   ? $"{snapshot.PumpRpm.Value:F0} RPM" : "n/a";
+
+				// CpuLoadText.Text = snapshot.CpuLoad.HasValue ? $"{snapshot.CpuLoad.Value:F0} %" : "n/a";
+				// GpuLoadText.Text = snapshot.GpuLoad.HasValue ? $"{snapshot.GpuLoad.Value:F0} %" : "n/a";
+
 				StatusText.Text = $"Update: {DateTime.Now:HH:mm:ss}";
 			}
-			catch (Exception ex)
+			catch ( Exception ex )
 			{
 				StatusText.Text = "Fehler beim Lesen der Sensoren.";
 			}
+			finally
+			{
+				_refreshGate.Release();
+			}
 		}
+
+
+		private MetricsSnapshot ReadMetricsSnapshot()
+		{
+			// Hier NICHT auf UI zugreifen!
+			var cpuTemp = _hwService.GetCpuTemperature();
+			var cpuLoad = _hwService.GetCpuLoad();
+			var gpuTemp = _hwService.GetGpuTemperature();
+			var gpuLoad = _hwService.GetGpuLoad();
+			var board   = _hwService.GetMotherboardTemperature();
+			var ssd     = _hwService.GetSsdTemperature();
+			var water   = _hwService.GetWaterTemperature();
+			var pump    = _hwService.GetPumpRpm();
+
+			return new MetricsSnapshot(
+				CpuTemp:   cpuTemp,
+				CpuLoad:   cpuLoad,
+				GpuTemp:   gpuTemp,
+				GpuLoad:   gpuLoad,
+				BoardTemp: board,
+				SsdTemp:   ssd,
+				WaterTemp: water,
+				PumpRpm:   pump
+			);
+		}
+
 
 		protected override void OnClosed(EventArgs e)
 		{
 			base.OnClosed(e);
 			_timer.Stop();
 			_hwService.Dispose();
+			_refreshGate.Dispose();
 		}
 	}
 
+
+	public record MetricsSnapshot (
+		float? CpuTemp,
+		float? CpuLoad,
+		float? GpuTemp,
+		float? GpuLoad,
+		float? BoardTemp,
+		float? SsdTemp,
+		float? WaterTemp,
+		float? PumpRpm
+	);
+
 	internal static class NativeMethods
 	{
-		[DllImport("user32.dll")]
+		[System.Runtime.InteropServices.DllImport("user32.dll")]
 		private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 		public static void DetachFromParent(IntPtr hwnd)
 		{
