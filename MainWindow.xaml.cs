@@ -55,35 +55,27 @@ namespace DesktopMetrics
 				_timer.Start();
 			};
 			KeyDown += MainWindow_KeyDown;
-
+			// TrayIcon related methods
 			_tray = new TrayIconService();
-
 			_tray.OnOpenRequested += () =>
 			{
 				this.Show();
 				this.WindowState = WindowState.Normal;
 				this.Activate();
 			};
-
 			_tray.OnSettingsRequested += () =>
 			{
 				System.Windows.MessageBox.Show("Einstellungen kommen hier hin!", "Settings");
 			};
-
+			_tray.OnDumpRequested += () =>
+			{
+				_hwService.DumpAllSensorsToFile();
+			};
 			_tray.OnExitRequested += () =>
 			{
 				_tray.Dispose();
 				this.Close();
 			};
-
-			//Debugging
-			this.Visibility = Visibility.Visible;
-			this.WindowState = WindowState.Normal;
-			this.ShowInTaskbar = true;
-			this.Topmost = true;
-			this.Activate();
-
-
 		}
 		private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
 		{

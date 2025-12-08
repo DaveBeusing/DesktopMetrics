@@ -31,6 +31,7 @@ namespace DesktopMetrics
 		private readonly WinForms.NotifyIcon _notifyIcon;
 		public event Action? OnOpenRequested;
 		public event Action? OnSettingsRequested;
+		public event Action? OnDumpRequested;
 		public event Action? OnExitRequested;
 		public TrayIconService()
 		{
@@ -45,6 +46,7 @@ namespace DesktopMetrics
 			var menu = new WinForms.ContextMenuStrip();
 			menu.Items.Add("Öffnen / Anzeigen").Click += (_, __) => OnOpenRequested?.Invoke();
 			menu.Items.Add("Einstellungen").Click += (_, __) => OnSettingsRequested?.Invoke();
+			menu.Items.Add("Sensordump").Click += (_, __) => OnDumpRequested?.Invoke();
 			menu.Items.Add(new WinForms.ToolStripSeparator());
 			menu.Items.Add("Beenden").Click += (_, __) => OnExitRequested?.Invoke();
 			_notifyIcon.ContextMenuStrip = menu;
