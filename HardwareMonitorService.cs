@@ -121,6 +121,22 @@ namespace DesktopMetrics
 				return hottest?.Value;
 			}
 		}
+		public float? GetMemoryAmbientTemperature()
+		{
+			lock (_lock)
+			{
+				var mb = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Motherboard);
+				if (mb == null) return null;
+				mb.Update();
+				// Alle Temp-Sensoren des Boards inkl. SuperIO (ITE IT8688E) durchgehen
+				var tempSensors = EnumerateSensors(mb, SensorType.Temperature).Where(s => s.Value.HasValue && IsPlausibleTemperature(s.Value.Value)).ToList();
+				if (tempSensors.Count == 0)
+					return null;
+				// Bei RAM-Last steigt Temperature #3 mit
+				var ramSensor = tempSensors.FirstOrDefault(s => s.Name.Equals("Temperature #3", StringComparison.OrdinalIgnoreCase));
+				return ramSensor?.Value;
+			}
+		}
 		private float? GetFromCooler(SensorType type, string nameContains)
 		{
 			lock (_lock)

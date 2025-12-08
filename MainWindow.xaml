@@ -54,6 +54,11 @@
 					<TextBlock Text="Board" Width="80" Foreground="#738099" FontSize="12"/>
 					<TextBlock x:Name="MbTempText" Text="–" Foreground="White" FontSize="12"/>
 				</StackPanel>
+				<!-- RAM -->
+				<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+					<TextBlock Text="RAM" Width="80" Foreground="#738099" FontSize="12"/>
+					<TextBlock x:Name="RamTempText" Text="–" Foreground="White" FontSize="12"/>
+				</StackPanel>
 				<!-- Storage -->
 				<StackPanel Orientation="Horizontal" Margin="0,0,0,2">
 					<TextBlock Text="SSD" Width="80" Foreground="#738099" FontSize="12"/>

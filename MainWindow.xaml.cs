@@ -153,6 +153,8 @@ namespace DesktopMetrics
 				GpuWattText.Text     = snapshot.GpuPower.HasValue  ? $" {snapshot.GpuPower.Value:F1} W" : "n/a";
 				//Board
 				MbTempText.Text      = snapshot.BoardTemp.HasValue ? $"{snapshot.BoardTemp.Value:F1} °C" : "n/a";
+				//RAM
+				RamTempText.Text     = snapshot.RamTemp.HasValue   ? $"{snapshot.RamTemp.Value:F1} °C"   : "n/a";
 				//Storage
 				StorageTempText.Text = snapshot.SsdTemp.HasValue   ? $"{snapshot.SsdTemp.Value:F1} °C" : "n/a";
 				//Cooling
@@ -179,21 +181,23 @@ namespace DesktopMetrics
 			var gpuTemp = _hwService.GetGpuTemperature();
 			var gpuLoad = _hwService.GetGpuLoad();
 			var gpuPower = _hwService.GetGpuPower();
-			var board   = _hwService.GetMotherboardTemperature();
-			var ssd     = _hwService.GetSsdTemperature();
-			var water   = _hwService.GetWaterTemperature();
-			var pump    = _hwService.GetPumpRpm();
+			var board = _hwService.GetMotherboardTemperature();
+			var ssd = _hwService.GetSsdTemperature();
+			var water = _hwService.GetWaterTemperature();
+			var pump = _hwService.GetPumpRpm();
+			var ramTemp = _hwService.GetMemoryAmbientTemperature();
 			return new MetricsSnapshot(
-				CpuTemp:   cpuTemp,
-				CpuLoad:   cpuLoad,
-				CpuPower:  cpuPower,
-				GpuTemp:   gpuTemp,
-				GpuLoad:   gpuLoad,
-				GpuPower:  gpuPower,
+				CpuTemp: cpuTemp,
+				CpuLoad: cpuLoad,
+				CpuPower: cpuPower,
+				GpuTemp: gpuTemp,
+				GpuLoad: gpuLoad,
+				GpuPower: gpuPower,
 				BoardTemp: board,
-				SsdTemp:   ssd,
+				SsdTemp: ssd,
 				WaterTemp: water,
-				PumpRpm:   pump
+				PumpRpm: pump,
+				RamTemp: ramTemp
 			);
 		}
 		protected override void OnClosed(EventArgs e)
@@ -215,7 +219,8 @@ namespace DesktopMetrics
 		float? BoardTemp,
 		float? SsdTemp,
 		float? WaterTemp,
-		float? PumpRpm
+		float? PumpRpm,
+		float? RamTemp
 	);
 	internal static class NativeMethods
 	{
