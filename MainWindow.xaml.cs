@@ -22,7 +22,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
+//using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -32,6 +32,7 @@ namespace DesktopMetrics
 {
 	public partial class MainWindow : Window
 	{
+		private TrayIconService _tray;
 		private readonly DispatcherTimer _timer;
 		private readonly HardwareMonitorService _hwService;
 		private readonly SemaphoreSlim _refreshGate = new(1, 1); // schützt vor parallelen Refreshes
@@ -54,8 +55,37 @@ namespace DesktopMetrics
 				_timer.Start();
 			};
 			KeyDown += MainWindow_KeyDown;
+
+			_tray = new TrayIconService();
+
+			_tray.OnOpenRequested += () =>
+			{
+				this.Show();
+				this.WindowState = WindowState.Normal;
+				this.Activate();
+			};
+
+			_tray.OnSettingsRequested += () =>
+			{
+				System.Windows.MessageBox.Show("Einstellungen kommen hier hin!", "Settings");
+			};
+
+			_tray.OnExitRequested += () =>
+			{
+				_tray.Dispose();
+				this.Close();
+			};
+
+			//Debugging
+			this.Visibility = Visibility.Visible;
+			this.WindowState = WindowState.Normal;
+			this.ShowInTaskbar = true;
+			this.Topmost = true;
+			this.Activate();
+
+
 		}
-		private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+		private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
 		{
 			if (e.Key == Key.F10)
 			{
@@ -139,7 +169,7 @@ namespace DesktopMetrics
 				//Status
 				//StatusText.Text = $"Update: {DateTime.Now:HH:mm:ss}";
 			}
-			catch ( Exception ex )
+			catch ( Exception )
 			{
 				StatusText.Text = "Fehler beim Lesen der Sensoren.";
 			}
@@ -176,6 +206,7 @@ namespace DesktopMetrics
 		}
 		protected override void OnClosed(EventArgs e)
 		{
+			_tray.Dispose();
 			base.OnClosed(e);
 			_timer.Stop();
 			_hwService.Dispose();

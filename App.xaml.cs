@@ -25,7 +25,7 @@ using System.Windows;
 
 namespace DesktopMetrics
 {
-	public partial class App : Application
+	public partial class App : System.Windows.Application
 	{
 		public App()
 		{
@@ -33,20 +33,20 @@ namespace DesktopMetrics
 			this.DispatcherUnhandledException += (_, e) =>
 			{
 				#if DEBUG
-					MessageBox.Show(e.Exception.ToString(), "UI Exception");
+					System.Windows.MessageBox.Show(e.Exception.ToString(), "UI Exception");
 				#endif
 				e.Handled = true;
 			};
 			AppDomain.CurrentDomain.UnhandledException += (_, e) =>
 			{
 				#if DEBUG
-					MessageBox.Show(e.ExceptionObject?.ToString() ?? "Unknown error", "UnhandledException");
+					System.Windows.MessageBox.Show(e.ExceptionObject?.ToString() ?? "Unknown error", "UnhandledException");
 				#endif
 			};
 			TaskScheduler.UnobservedTaskException += (_, e) =>
 			{
 				#if DEBUG
-					MessageBox.Show(e.Exception.ToString(), "Task Exception");
+					System.Windows.MessageBox.Show(e.Exception.ToString(), "Task Exception");
 				#endif
 				e.SetObserved();
 			};
