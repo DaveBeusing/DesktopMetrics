@@ -22,39 +22,49 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-//using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
+
 
 namespace DesktopMetrics
 {
 	public partial class MainWindow : Window
 	{
 		private TrayIconService _tray;
-		private readonly DispatcherTimer _timer;
+		private readonly DispatcherTimer _sensorRefreshTimer;
+		private readonly DispatcherTimer _fsDetectTimer;
 		private readonly HardwareMonitorService _hwService;
 		private readonly SemaphoreSlim _refreshGate = new(1, 1); // schützt vor parallelen Refreshes
 		private bool _isWallpaper = false;
+		private bool _isOverlay = false;
 		public MainWindow()
 		{
 			InitializeComponent();
-			Positioning();
+			//Positioning();
 			_hwService = new HardwareMonitorService();
-			_timer = new DispatcherTimer
+			_sensorRefreshTimer = new DispatcherTimer
 			{
-				Interval = TimeSpan.FromSeconds(1) // refresh 1 sec
+				Interval = TimeSpan.FromSeconds(1) // refresh rate
 			};
-			_timer.Tick += async (_, __) => await RefreshMetricsAsync();
+			_sensorRefreshTimer.Tick += async (_, __) => await RefreshMetricsAsync();
 			Loaded += async (_, __) =>
 			{
 				this.UpdateLayout();
-				Positioning(); //??
+				Positioning();
 				await RefreshMetricsAsync();
-				_timer.Start();
+				_sensorRefreshTimer.Start();
 			};
-			KeyDown += MainWindow_KeyDown;
+
+			//obsolet!!??
+			_fsDetectTimer = new DispatcherTimer {
+				Interval = TimeSpan.FromSeconds(2)
+			};
+			_fsDetectTimer.Tick += (_, __) => CheckFullscreen();
+			_fsDetectTimer.Start();
+
+
 			// TrayIcon related methods
 			_tray = new TrayIconService();
 			_tray.OnOpenRequested += () =>
@@ -67,6 +77,10 @@ namespace DesktopMetrics
 			{
 				System.Windows.MessageBox.Show("Einstellungen kommen hier hin!", "Settings");
 			};
+			_tray.OnOverlayToggle += () =>
+			{
+				Dispatcher.Invoke(ToggleWallpaperMode);
+			};
 			_tray.OnDumpRequested += () =>
 			{
 				_hwService.DumpAllSensorsToFile();
@@ -77,22 +91,7 @@ namespace DesktopMetrics
 				this.Close();
 			};
 		}
-		private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-		{
-			if (e.Key == Key.F10)
-			{
-				ToggleWallpaperMode();
-			}
-			else if (e.Key == Key.F9)
-			{
-				string file = _hwService.DumpAllSensorsToFile();
-				StatusText.Text = $"Sensor-Dump gespeichert: {file}";
-			}
-			else if (e.Key == Key.Escape)
-			{
-				Close();
-			}
-		}
+
 		private void ToggleWallpaperMode()
 		{
 			var hwnd = new WindowInteropHelper(this).Handle;
@@ -103,18 +102,16 @@ namespace DesktopMetrics
 				ShowInTaskbar = false;
 				Topmost = false;
 				_isWallpaper = true;
-				//ModeText.Text = "Modus: Wallpaper";
-				StatusText.Text = "Wallpaper-Modus aktiv. F10 für Normal.";
+				StatusText.Text = "Wallpaper-Modus aktiv.";
 			}
 			else
 			{
 				// Zurück zu normalem Top-Level-Fenster
 				NativeMethods.DetachFromParent(hwnd);
-				ShowInTaskbar = true;
+				ShowInTaskbar = false;//true
 				Topmost = true;
 				_isWallpaper = false;
-				//ModeText.Text = "Modus: Normal";
-				StatusText.Text = "Normal-Modus aktiv. F10 für Wallpaper.";
+				StatusText.Text = "Normal-Modus aktiv.";
 			}
 			this.UpdateLayout();
 			Positioning();
@@ -122,17 +119,80 @@ namespace DesktopMetrics
 		private void Positioning()
 		{
 			var workArea  = SystemParameters.WorkArea;
-			const double marginRight = 10; // 10px Abstand zum Rand
-			const double marginTop = 20;
+			const double marginRight = 50;
+			const double marginTop = 30;
 			double width = this.ActualWidth;
 			if ( width <= 0 )
 			{
-				this.Width = 250;
+				this.Width = 450;
 				width = this.Width;
 			}
 			this.Left = workArea.Right - width - marginRight;
 			this.Top  = workArea.Top + marginTop; 
 		}
+
+		private void CheckFullscreen()
+		{
+			try
+			{
+				var hwnd = NativeMethods.GetForegroundWindow();
+				if (hwnd == IntPtr.Zero)
+					return;
+
+				// eigenen Prozess rausfiltern
+				NativeMethods.GetWindowThreadProcessId(hwnd, out uint pid);
+				int currentPid = System.Diagnostics.Process.GetCurrentProcess().Id;
+				if (pid == currentPid)
+					return;
+
+				// Fenstergröße holen
+				if (!NativeMethods.GetWindowRect(hwnd, out RECT rect))
+					return;
+
+				int width  = rect.Right - rect.Left;
+				int height = rect.Bottom - rect.Top;
+
+				// Primärbildschirm
+				double screenW = SystemParameters.PrimaryScreenWidth;
+				double screenH = SystemParameters.PrimaryScreenHeight;
+
+				// Toleranz, z.B. wegen Rand / Taskleiste
+				const int tolerance = 40;
+
+				bool isFullscreen =
+					Math.Abs(width  - screenW) <= tolerance &&
+					Math.Abs(height - screenH) <= tolerance;
+
+				if (isFullscreen)
+				{
+					if (!_isOverlay)
+					{
+						_isOverlay = true;
+						this.Topmost = true;
+						this.UpdateLayout();
+						Positioning();
+					}
+				}
+				else
+				{
+					if (_isOverlay)
+					{
+						_isOverlay = false;
+						this.Topmost = false;
+						this.UpdateLayout();
+						Positioning();
+					}
+				}
+			}
+			catch
+			{
+				// still & safe ... kein UI-Crash
+			}
+			
+			
+		}
+
+
 		private async Task RefreshMetricsAsync()
 		{
 			if( !await _refreshGate.WaitAsync(0) )
@@ -200,11 +260,14 @@ namespace DesktopMetrics
 				RamTemp: ramTemp
 			);
 		}
+
+
 		protected override void OnClosed(EventArgs e)
 		{
 			_tray.Dispose();
 			base.OnClosed(e);
-			_timer.Stop();
+			_sensorRefreshTimer.Stop();
+			_fsDetectTimer.Stop();
 			_hwService.Dispose();
 			_refreshGate.Dispose();
 		}
@@ -226,10 +289,24 @@ namespace DesktopMetrics
 	{
 		[System.Runtime.InteropServices.DllImport("user32.dll")]
 		private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+		[System.Runtime.InteropServices.DllImport("user32.dll")]
+		public static extern IntPtr GetForegroundWindow();
+		[System.Runtime.InteropServices.DllImport("user32.dll")]
+		public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+		[System.Runtime.InteropServices.DllImport("user32.dll")]
+		public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 		public static void DetachFromParent(IntPtr hwnd)
 		{
 			// 0 = wieder Top-Level-Fenster
 			SetParent(hwnd, IntPtr.Zero);
 		}
 	}
+}
+
+public struct RECT
+{
+	public int Left;
+	public int Top;
+	public int Right;
+	public int Bottom;
 }
