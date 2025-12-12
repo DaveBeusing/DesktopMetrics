@@ -22,7 +22,9 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using WinForms = System.Windows.Forms;
+
 
 namespace DesktopMetrics
 {
@@ -56,13 +58,42 @@ namespace DesktopMetrics
 			_notifyIcon.MouseClick += (s, e) =>
 			{
 				if (e.Button == WinForms.MouseButtons.Left)
-					OnOpenRequested?.Invoke();
+				{
+					//OnOpenRequested?.Invoke();
+					//ShowContextMenu(); //vorbereitet
+				}
 			};
+		}
+		private void ShowContextMenu()
+		{
+			if (_notifyIcon.ContextMenuStrip == null)
+				return;
+			if (!GetCursorPos(out POINT p))
+				return;
+			// Irgendein Fenster in den Vordergrund setzen, damit das Kontextmenü nicht direkt wieder zugeht....!!! wyld
+			IntPtr hwnd = Process.GetCurrentProcess().MainWindowHandle;
+			if (hwnd != IntPtr.Zero)
+			{
+				SetForegroundWindow(hwnd);
+			}
+			_notifyIcon.ContextMenuStrip.Show(p.X, p.Y);
 		}
 		public void Dispose()
 		{
 			_notifyIcon.Visible = false;
 			_notifyIcon.Dispose();
 		}
+
+		//Win32 Interop
+		[StructLayout(LayoutKind.Sequential)]
+		private struct POINT
+		{
+			public int X;
+			public int Y;
+		}
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern bool GetCursorPos(out POINT lpPoint);
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern IntPtr SetForegroundWindow(IntPtr hWnd);
 	}
 }
